@@ -8,6 +8,11 @@ Nothing is written to the attempts. The last saved response of each question
 is re-graded in memory only, so the quiz behaviour is not affected: with
 deferred feedback, for example, students still see nothing until they submit.
 
+> **Vibe coded.** This plugin was written by an AI assistant (Claude, by
+> Anthropic) following my instructions and tests; I did not write the code
+> myself. It works on my Moodle 4.5 site, but review it before using it in
+> production.
+
 ## Features
 
 - One row per attempt in progress or finished (previews excluded), with
@@ -37,6 +42,11 @@ then visit *Site administration > Notifications* (or run
 
 The report then appears in the quiz *Results* menu as **Live status** for users
 with the `mod/quiz:viewreports` capability.
+
+## Contributing
+
+Contributions are welcome: bug reports, ideas, translations and pull requests,
+especially from people who actually know Moodle's internals.
 
 ## License
 

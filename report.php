@@ -22,7 +22,7 @@
  * so the quiz behaviour (e.g. deferred feedback) is unaffected for the students.
  *
  * @package   quiz_livestatus
- * @copyright 2026
+ * @copyright 2026 wishmerhill
  * @license   https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

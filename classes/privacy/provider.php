@@ -20,7 +20,7 @@ namespace quiz_livestatus\privacy;
  * Privacy provider: this report stores no personal data.
  *
  * @package   quiz_livestatus
- * @copyright 2026
+ * @copyright 2026 wishmerhill
  * @license   https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class provider implements \core_privacy\local\metadata\null_provider {
