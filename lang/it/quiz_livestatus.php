@@ -1,0 +1,47 @@
+<?php
+// This file is part of Moodle - https://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <https://www.gnu.org/licenses/>.
+
+/**
+ * Italian strings for the quiz live status report.
+ *
+ * @package   quiz_livestatus
+ * @copyright 2026
+ * @license   https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
+defined('MOODLE_INTERNAL') || die();
+
+$string['pluginname'] = 'Stato in diretta';
+$string['livestatus'] = 'Stato in diretta';
+$string['privacy:metadata'] = 'Il report "Stato in diretta" mostra solo i dati dei tentativi esistenti e non memorizza dati personali.';
+
+$string['autosavenote'] = 'Le risposte compaiono qui quando il browser dello studente le ha salvate: al cambio pagina o con il salvataggio automatico (ogni {$a}). Lo studente non vede se le risposte sono giuste: questo dipende solo dal comportamento del quiz (es. feedback differito).';
+$string['autosavedisabled'] = 'Il salvataggio automatico del quiz è disattivato: le risposte compaiono qui solo quando lo studente cambia pagina o consegna.';
+$string['col_answered'] = 'Risposte date';
+$string['col_attempt'] = 'Tentativo';
+$string['col_correct'] = 'Giuste';
+$string['col_lastactivity'] = 'Ultimo salvataggio';
+$string['col_partial'] = 'Parziali';
+$string['col_percentage'] = 'Percentuale';
+$string['col_state'] = 'Stato';
+$string['col_student'] = 'Studente';
+$string['col_unanswered'] = 'Non date';
+$string['col_wrong'] = 'Sbagliate';
+$string['lastupdate'] = 'Aggiornato alle {$a->time}, aggiornamento automatico ogni {$a->seconds} secondi.';
+$string['noattempts'] = 'Nessun tentativo in corso o completato.';
+$string['refreshnow'] = 'Aggiorna ora';
+$string['state_finished'] = 'Completato';
+$string['state_inprogress'] = 'In corso';
