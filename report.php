@@ -42,6 +42,21 @@ class quiz_livestatus_report extends report_base {
     /** @var float minimum fraction for an answer to count as correct. */
     const CORRECT_FRACTION = 0.99;
 
+    /** @var string progress bar with one segment per result. */
+    const BAR_SEGMENTS = 'segments';
+
+    /** @var string progress bar in a single colour: good or bad. */
+    const BAR_BINARY = 'binary';
+
+    /** @var string[] symbol shown in the details for each result. */
+    const SYMBOLS = ['correct' => '✔', 'partial' => '~', 'wrong' => '✘', 'unanswered' => '·', 'error' => '?'];
+
+    /** @var string progress bar style, one of the BAR_ constants. */
+    protected $barstyle = self::BAR_SEGMENTS;
+
+    /** @var bool whether rows can be expanded to show the result of each question. */
+    protected $showdetails = true;
+
     /**
      * Display the report.
      *
@@ -56,10 +71,14 @@ class quiz_livestatus_report extends report_base {
         $context = context_module::instance($cm->id);
         require_capability('mod/quiz:viewreports', $context);
 
+        $config = get_config('quiz_livestatus');
+        if (($config->barstyle ?? '') === self::BAR_BINARY) {
+            $this->barstyle = self::BAR_BINARY;
+        }
+        $this->showdetails = !isset($config->showdetails) || !empty($config->showdetails);
+
         $reporturl = new moodle_url('/mod/quiz/report.php', ['id' => $cm->id, 'mode' => 'livestatus']);
-        $PAGE->requires->js_init_code(
-            'setTimeout(function() { window.location.reload(); }, ' . (self::REFRESH_SECONDS * 1000) . ');'
-        );
+        $PAGE->requires->js_init_code($this->get_js((int) $cm->id));
 
         $this->print_header_and_tabs($cm, $course, $quiz, 'livestatus');
 
@@ -95,6 +114,87 @@ class quiz_livestatus_report extends report_base {
         echo html_writer::table($this->build_table($attempts, $course));
         echo $OUTPUT->footer();
         return true;
+    }
+
+    /**
+     * JavaScript for the automatic refresh and the expandable rows.
+     *
+     * Open rows and the scroll position are kept in sessionStorage, so they survive the refresh.
+     *
+     * @param int $cmid the course module id, used to keep the state of each quiz apart.
+     * @return string the code.
+     */
+    protected function get_js(int $cmid): string {
+        $key = json_encode('quiz_livestatus_' . $cmid);
+        $delay = self::REFRESH_SECONDS * 1000;
+        return <<<JS
+(function() {
+    var key = {$key};
+    var state = {open: [], scroll: 0, time: 0};
+    try {
+        state = Object.assign(state, JSON.parse(window.sessionStorage.getItem(key)) || {});
+    } catch (e) {
+        // Storage not available: rows simply start closed.
+    }
+    var open = state.open;
+
+    function save() {
+        try {
+            window.sessionStorage.setItem(key, JSON.stringify({open: open, scroll: window.scrollY, time: Date.now()}));
+        } catch (e) {
+            // Ignore.
+        }
+    }
+
+    function setOpen(row, isopen) {
+        var detail = document.querySelector('tr.qls-detail[data-attemptid="' + row.dataset.attemptid + '"]');
+        if (!detail) {
+            return;
+        }
+        detail.classList.toggle('d-none', !isopen);
+        row.setAttribute('aria-expanded', isopen ? 'true' : 'false');
+        var caret = row.querySelector('.qls-caret');
+        if (caret) {
+            caret.textContent = isopen ? '▾' : '▸';
+        }
+    }
+
+    function toggle(row) {
+        var id = row.dataset.attemptid;
+        var isopen = open.indexOf(id) === -1;
+        open = open.filter(function(x) { return x !== id; });
+        if (isopen) {
+            open.push(id);
+        }
+        setOpen(row, isopen);
+        save();
+    }
+
+    document.querySelectorAll('tr.qls-toggle').forEach(function(row) {
+        if (open.indexOf(row.dataset.attemptid) !== -1) {
+            setOpen(row, true);
+        }
+        row.addEventListener('click', function(e) {
+            if (!e.target.closest('a, button, input')) {
+                toggle(row);
+            }
+        });
+        row.addEventListener('keydown', function(e) {
+            if ((e.key === 'Enter' || e.key === ' ') && e.target === row) {
+                e.preventDefault();
+                toggle(row);
+            }
+        });
+    });
+
+    // Back to where the teacher was, but only right after a refresh.
+    if (state.time && Date.now() - state.time < {$delay} + 30000) {
+        window.scrollTo(0, state.scroll);
+    }
+    window.addEventListener('beforeunload', save);
+    setTimeout(function() { window.location.reload(); }, {$delay});
+})();
+JS;
     }
 
     /**
@@ -134,15 +234,16 @@ class quiz_livestatus_report extends report_base {
      * Re-grade, in memory only, the last saved response of every question of an attempt.
      *
      * @param stdClass $attempt the attempt row.
-     * @return array counts: total, answered, correct, partial, wrong, unanswered, lastsaved.
+     * @return array counts: total, answered, correct, partial, wrong, unanswered, lastsaved,
+     *      plus 'slots': list of ['number' => displayed question number, 'result' => key of SYMBOLS].
      */
     protected function summarise_attempt(stdClass $attempt): array {
         $counts = ['total' => 0, 'answered' => 0, 'correct' => 0, 'partial' => 0, 'wrong' => 0,
-                'unanswered' => 0, 'lastsaved' => (int) $attempt->timestart];
+                'unanswered' => 0, 'lastsaved' => (int) $attempt->timestart, 'slots' => []];
 
-        $quba = \question_engine::load_questions_usage_by_activity($attempt->uniqueid);
-        foreach ($quba->get_slots() as $slot) {
-            $qa = $quba->get_question_attempt($slot);
+        $attemptobj = quiz_attempt::create($attempt->id);
+        foreach ($attemptobj->get_slots() as $slot) {
+            $qa = $attemptobj->get_question_attempt($slot);
             $question = $qa->get_question();
 
             // Descriptions and manually graded questions (e.g. essay) cannot be judged automatically.
@@ -150,34 +251,101 @@ class quiz_livestatus_report extends report_base {
                 continue;
             }
             $counts['total']++;
+            $result = $this->grade_slot($qa, $attempt, $slot);
+            if ($result !== 'unanswered') {
+                $counts['answered']++;
+            }
+            if ($result !== 'error') {
+                $counts[$result]++;
+            }
+            $counts['slots'][] = ['number' => $attemptobj->get_question_number($slot), 'result' => $result];
 
             // Includes the autosaved step, if any, so not-yet-submitted answers are visible.
-            $response = $qa->get_last_qt_data();
             $counts['lastsaved'] = max($counts['lastsaved'], (int) $qa->get_last_step()->get_timecreated());
-
-            if (empty($response) || !$question->is_gradable_response($response)) {
-                $counts['unanswered']++;
-                continue;
-            }
-            $counts['answered']++;
-
-            try {
-                [$fraction] = $question->grade_response($response);
-            } catch (\Throwable $e) {
-                debugging('quiz_livestatus: cannot grade slot ' . $slot . ' of attempt ' . $attempt->id .
-                        ': ' . $e->getMessage(), DEBUG_DEVELOPER);
-                continue;
-            }
-
-            if ($fraction >= self::CORRECT_FRACTION) {
-                $counts['correct']++;
-            } else if ($fraction > 0) {
-                $counts['partial']++;
-            } else {
-                $counts['wrong']++;
-            }
         }
         return $counts;
+    }
+
+    /**
+     * Grade, in memory only, the last saved response of one question.
+     *
+     * @param question_attempt $qa the question attempt.
+     * @param stdClass $attempt the attempt row, for error messages.
+     * @param int $slot the slot, for error messages.
+     * @return string correct, partial, wrong, unanswered or error.
+     */
+    protected function grade_slot(\question_attempt $qa, stdClass $attempt, int $slot): string {
+        $question = $qa->get_question();
+        // Includes the autosaved step, if any.
+        $response = $qa->get_last_qt_data();
+        if (empty($response) || !$question->is_gradable_response($response)) {
+            return 'unanswered';
+        }
+        try {
+            [$fraction] = $question->grade_response($response);
+        } catch (\Throwable $e) {
+            debugging('quiz_livestatus: cannot grade slot ' . $slot . ' of attempt ' . $attempt->id .
+                    ': ' . $e->getMessage(), DEBUG_DEVELOPER);
+            return 'error';
+        }
+        if ($fraction >= self::CORRECT_FRACTION) {
+            return 'correct';
+        }
+        return $fraction > 0 ? 'partial' : 'wrong';
+    }
+
+    /**
+     * Render the coloured progress bar with the "answered / total" text.
+     *
+     * Widths are fractions of all gradable questions; the grey background is what is still unanswered.
+     *
+     * @param array $c the counts from summarise_attempt().
+     * @return string HTML.
+     */
+    protected function render_progress_bar(array $c): string {
+        $width = fn(int $n): string => 'width: ' . ($c['total'] ? round(100 * $n / $c['total'], 2) : 0) . '%';
+
+        $segments = '';
+        if ($this->barstyle === self::BAR_BINARY) {
+            $graded = $c['correct'] + $c['partial'] + $c['wrong'];
+            if ($graded) {
+                $good = ($c['correct'] + 0.5 * $c['partial']) / $graded > 0.5;
+                $segments = html_writer::span('', $good ? 'qls-good' : 'qls-bad', ['style' => $width($graded)]);
+            }
+        } else {
+            foreach (['correct', 'partial', 'wrong'] as $result) {
+                if ($c[$result]) {
+                    $segments .= html_writer::span('', 'qls-' . $result, ['style' => $width($c[$result])]);
+                }
+            }
+        }
+
+        $summary = get_string('bar_summary', 'quiz_livestatus', (object) $c);
+        return html_writer::div(
+            html_writer::div($segments, 'qls-bar', ['role' => 'img', 'aria-label' => $summary, 'title' => $summary]) .
+            html_writer::span($c['answered'] . ' / ' . $c['total'], 'qls-count'),
+            'qls-progress');
+    }
+
+    /**
+     * Render the result of each question as small badges, e.g. "3 ✔".
+     *
+     * @param array $slots the 'slots' list from summarise_attempt().
+     * @return string HTML.
+     */
+    protected function render_details(array $slots): string {
+        $badges = '';
+        foreach ($slots as $s) {
+            $label = get_string('detail_question', 'quiz_livestatus', (object) [
+                'number' => $s['number'],
+                'result' => get_string('detail_' . $s['result'], 'quiz_livestatus'),
+            ]);
+            $badges .= html_writer::span(
+                s($s['number']) . ' ' . html_writer::span(self::SYMBOLS[$s['result']], '', ['aria-hidden' => 'true']) .
+                html_writer::span($label, 'visually-hidden'),
+                'qls-badge qls-' . $s['result'], ['title' => $label]);
+        }
+        return html_writer::div($badges, 'qls-badges');
     }
 
     /**
@@ -189,12 +357,13 @@ class quiz_livestatus_report extends report_base {
      */
     protected function build_table(array $attempts, $course): html_table {
         $table = new html_table();
-        $table->attributes['class'] = 'generaltable table table-striped table-hover table-sm';
+        // No table-striped: the hidden detail rows would break the alternation.
+        $table->attributes['class'] = 'generaltable table table-hover table-sm quiz-livestatus-table';
         $table->head = array_map(fn($k) => get_string($k, 'quiz_livestatus'), [
             'col_student', 'col_attempt', 'col_state', 'col_answered', 'col_correct', 'col_partial',
             'col_wrong', 'col_unanswered', 'col_percentage', 'col_lastactivity',
         ]);
-        $table->align = ['left', 'center', 'left', 'center', 'center', 'center', 'center', 'center', 'right', 'left'];
+        $table->align = ['left', 'center', 'left', 'left', 'center', 'center', 'center', 'center', 'right', 'left'];
 
         foreach ($attempts as $attempt) {
             $c = $this->summarise_attempt($attempt);
@@ -208,21 +377,43 @@ class quiz_livestatus_report extends report_base {
             $name = html_writer::link(
                 new moodle_url('/user/view.php', ['id' => $attempt->userid, 'course' => $course->id]),
                 fullname($attempt));
+            if ($this->showdetails) {
+                $name = html_writer::span('▸', 'qls-caret', ['aria-hidden' => 'true']) . ' ' . $name;
+            }
             $review = html_writer::link(
                 new moodle_url('/mod/quiz/review.php', ['attempt' => $attempt->id]), $attempt->attempt);
 
-            $table->data[] = [
+            $row = new html_table_row([
                 $name,
                 $review,
                 $state,
-                $c['answered'] . ' / ' . $c['total'],
+                $this->render_progress_bar($c),
                 html_writer::span($c['correct'], 'text-success fw-bold'),
                 $c['partial'],
                 html_writer::span($c['wrong'], 'text-danger fw-bold'),
                 $c['unanswered'],
                 $percentage . '%',
                 userdate($c['lastsaved'], get_string('strftimedatetimeshort', 'langconfig')),
+            ]);
+            if (!$this->showdetails) {
+                $table->data[] = $row;
+                continue;
+            }
+
+            $row->attributes = [
+                'class' => 'qls-toggle',
+                'data-attemptid' => $attempt->id,
+                'tabindex' => '0',
+                'aria-expanded' => 'false',
+                'title' => get_string('toggle_details', 'quiz_livestatus'),
             ];
+            $table->data[] = $row;
+
+            $cell = new html_table_cell($this->render_details($c['slots']));
+            $cell->colspan = count($table->head);
+            $detail = new html_table_row([$cell]);
+            $detail->attributes = ['class' => 'qls-detail d-none', 'data-attemptid' => $attempt->id];
+            $table->data[] = $detail;
         }
         return $table;
     }

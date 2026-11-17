@@ -18,7 +18,17 @@ deferred feedback, for example, students still see nothing until they submit.
 - One row per attempt in progress or finished (previews excluded), with
   columns: student, attempt, state, answered, correct, partial, wrong,
   not answered, percentage, last saved.
+- Coloured progress bar in the "Answered" column, in pastel colours. Two styles,
+  chosen in the settings:
+  - *segments*: green for correct, yellow for partial and red for wrong answers,
+    grey for the questions not answered yet;
+  - *single colour*: the answered part is green if more than half of the answers
+    given so far are correct (a partial answer counts as half), red otherwise.
+- Click a row to see, question by question, which answers are correct (✔),
+  partial (~), wrong (✘) or not given yet (·). Only right or wrong is shown,
+  never the answers themselves. This can be switched off in the settings.
 - Page refreshes automatically every 10 seconds, plus a "Refresh now" button.
+  Open rows and the scroll position are kept across refreshes.
 - Respects separate groups.
 - Skips descriptions and manually graded questions (e.g. essays).
 - Languages: English, Italian.
@@ -47,6 +57,13 @@ with the `mod/quiz:viewreports` capability.
 
 Contributions are welcome: bug reports, ideas, translations and pull requests,
 especially from people who actually know Moodle's internals.
+
+## Settings
+
+*Site administration > Plugins > Activity modules > Quiz > Live status*:
+
+- **Progress bar colours**: segments (default) or single colour.
+- **Show answers per question**: lets teachers expand a row (default: on).
 
 ## License
 
