@@ -4,12 +4,16 @@
 # The ZIP must contain a single folder named after the plugin (livestatus/), which is why the
 # "Source code (zip)" archive made by GitHub cannot be used. Files marked export-ignore in
 # .gitattributes are left out.
+#
+# A push to a branch named ci/... runs everything as a dry run: the ZIP is built from the branch
+# and the fetch of the latest annotated tag is tested, but no release is created.
 
 name: Release
 
 on:
   push:
     tags: ['v*']
+    branches: ['ci/**']
 
 permissions:
   contents: write
@@ -18,30 +22,57 @@ jobs:
   release:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
+      - name: Choose what to build
+        id: target
+        run: |
+          if [ "$GITHUB_REF_TYPE" = "tag" ]; then
+            echo "tag=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+            echo "ref=$GITHUB_REF_NAME" >> "$GITHUB_OUTPUT"
+            echo "dryrun=false" >> "$GITHUB_OUTPUT"
+          else
+            tag=$(git describe --tags --abbrev=0)
+            echo "::notice::Dry run on branch $GITHUB_REF_NAME: nothing is published, tag fetch tested with $tag"
+            echo "tag=$tag" >> "$GITHUB_OUTPUT"
+            echo "ref=HEAD" >> "$GITHUB_OUTPUT"
+            echo "dryrun=true" >> "$GITHUB_OUTPUT"
+          fi
+
       # actions/checkout may turn an annotated tag into a lightweight one, losing the message used as release notes.
       - name: Fetch the annotated tag
-        run: git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+        env:
+          TAG: ${{ steps.target.outputs.tag }}
+        run: |
+          git fetch --force origin "refs/tags/$TAG:refs/tags/$TAG"
+          if [ "$(git cat-file -t "$TAG")" != "tag" ]; then
+            echo "::error::$TAG is not an annotated tag: its message is needed for the release notes"
+            exit 1
+          fi
+          git tag -l -n3 "$TAG"
 
       - name: Check that the tag matches version.php
         id: version
+        env:
+          TAG: ${{ steps.target.outputs.tag }}
+          DRYRUN: ${{ steps.target.outputs.dryrun }}
         run: |
-          tag="${GITHUB_REF_NAME}"
           release=$(sed -n "s/^\$plugin->release *= *'\(.*\)';.*/\1/p" version.php)
-          echo "tag: $tag, version.php release: $release"
-          if [ "v$release" != "$tag" ]; then
-            echo "::error::Tag $tag does not match \$plugin->release '$release' in version.php"
+          echo "tag: $TAG, version.php release: $release"
+          if [ "$DRYRUN" = "false" ] && [ "v$release" != "$TAG" ]; then
+            echo "::error::Tag $TAG does not match \$plugin->release '$release' in version.php"
             exit 1
           fi
           echo "release=$release" >> "$GITHUB_OUTPUT"
 
       - name: Build the ZIP
+        env:
+          REF: ${{ steps.target.outputs.ref }}
         run: |
           zip="quiz_livestatus-${{ steps.version.outputs.release }}.zip"
-          git archive --format=zip --prefix=livestatus/ -o "$zip" "$GITHUB_REF_NAME"
+          git archive --format=zip --prefix=livestatus/ -o "$zip" "$REF"
           unzip -l "$zip"
           unzip -l "$zip" | grep -q ' livestatus/version.php$'
           unzip -l "$zip" | grep -q ' livestatus/lang/en/quiz_livestatus.php$'
@@ -52,6 +83,7 @@ jobs:
           echo "ZIP=$zip" >> "$GITHUB_ENV"
 
       - name: Create the GitHub release
+        if: steps.target.outputs.dryrun == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
