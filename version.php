@@ -25,8 +25,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'quiz_livestatus';
-$plugin->version   = 2026111800;
+$plugin->version   = 2026111801;
 $plugin->requires  = 2024100700;
 $plugin->supported = [405, 405];
 $plugin->maturity  = MATURITY_BETA;
-$plugin->release   = '0.3';
+$plugin->release   = '0.3.1';

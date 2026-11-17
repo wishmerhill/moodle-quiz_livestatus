@@ -101,6 +101,8 @@ with the `mod/quiz:viewreports` capability.
 
 ## Changes
 
+- **0.3.1** (beta): fix: the report page ended with the error "Invalid state
+  passed to moodle_page::set_state" because the footer was printed twice.
 - **0.3** (beta): JavaScript moved to an AMD module, code style checked with
   moodle-plugin-ci, Italian strings moved out of the plugin (to be contributed
   through AMOS).
