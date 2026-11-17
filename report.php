@@ -278,7 +278,11 @@ JS;
         $question = $qa->get_question();
         // Includes the autosaved step, if any.
         $response = $qa->get_last_qt_data();
-        if (empty($response) || !$question->is_gradable_response($response)) {
+        // Variables starting with '_' are set by the question itself when the attempt starts (e.g. the shuffled
+        // order): they are not an answer. Some types (e.g. ordering) treat any response as gradable, so without
+        // this check a question the student has not touched yet would be graded on its initial state.
+        $given = array_filter(array_keys($response), fn($name) => !str_starts_with($name, '_'));
+        if (!$given || !$question->is_gradable_response($response)) {
             return 'unanswered';
         }
         try {
