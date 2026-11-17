@@ -1,0 +1,56 @@
+# Builds the ZIP that Moodle can install from "Site administration > Plugins > Install plugins"
+# and publishes it as a GitHub release, whenever a tag like v0.2 is pushed.
+#
+# The ZIP must contain a single folder named after the plugin (livestatus/), which is why the
+# "Source code (zip)" archive made by GitHub cannot be used. Files marked export-ignore in
+# .gitattributes are left out.
+
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check that the tag matches version.php
+        id: version
+        run: |
+          tag="${GITHUB_REF_NAME}"
+          release=$(sed -n "s/^\$plugin->release *= *'\(.*\)';.*/\1/p" version.php)
+          echo "tag: $tag, version.php release: $release"
+          if [ "v$release" != "$tag" ]; then
+            echo "::error::Tag $tag does not match \$plugin->release '$release' in version.php"
+            exit 1
+          fi
+          echo "release=$release" >> "$GITHUB_OUTPUT"
+
+      - name: Build the ZIP
+        run: |
+          zip="quiz_livestatus-${{ steps.version.outputs.release }}.zip"
+          git archive --format=zip --prefix=livestatus/ -o "$zip" "$GITHUB_REF_NAME"
+          unzip -l "$zip"
+          unzip -l "$zip" | grep -q ' livestatus/version.php$'
+          unzip -l "$zip" | grep -q ' livestatus/lang/en/quiz_livestatus.php$'
+          if unzip -l "$zip" | grep -Eq ' livestatus/(\.git|\.github|dev/)'; then
+            echo "::error::The ZIP contains files that should have been excluded"
+            exit 1
+          fi
+          echo "ZIP=$zip" >> "$GITHUB_ENV"
+
+      - name: Create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" "$ZIP" \
+            --title "${{ steps.version.outputs.release }}" \
+            --notes-from-tag

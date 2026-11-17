@@ -68,8 +68,24 @@ to see answers sooner.
 
 ## Installation
 
-Copy this folder to `mod/quiz/report/livestatus` in your Moodle installation,
-then visit *Site administration > Notifications* (or run
+### From the Moodle web interface (recommended)
+
+1. Download `quiz_livestatus-X.Y.zip` from the
+   [Releases](https://github.com/wishmerhill/moodle-quiz_livestatus/releases)
+   page.
+2. In Moodle, go to *Site administration > Plugins > Install plugins*, upload
+   the ZIP and follow the steps.
+
+Use the `quiz_livestatus-X.Y.zip` file, not the *Source code (zip)* archive
+that GitHub adds to every release: Moodle needs the files inside a folder named
+`livestatus`, and that archive uses a different name.
+
+The same procedure updates an existing installation to a newer version.
+
+### By hand
+
+Copy the plugin files to `mod/quiz/report/livestatus` in your Moodle
+installation, then visit *Site administration > Notifications* (or run
 `php admin/cli/upgrade.php`).
 
 The report then appears in the quiz *Results* menu as **Live status** for users
@@ -84,9 +100,9 @@ with the `mod/quiz:viewreports` capability.
 
 ## Changes
 
-- **0.2**: coloured progress bar, per-question details, site settings.
+- **0.2** (beta): coloured progress bar, per-question details, site settings.
   Fix: an ordering question the student had not touched yet was counted as
-  answered.
+  answered. First release with an installable ZIP.
 - **0.1**: first version.
 
 ## Contributing
