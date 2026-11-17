@@ -18,16 +18,11 @@
  * Italian strings for the quiz live status report.
  *
  * @package   quiz_livestatus
- * @copyright 2026 wishmerhill
+ * @copyright 2026 Alberto Azzalini <alberto.azzalini@gmail.com>
  * @license   https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
-
-$string['pluginname'] = 'Stato in diretta';
-$string['livestatus'] = 'Stato in diretta';
-$string['livestatusreport'] = 'Stato in diretta';
-$string['privacy:metadata'] = 'Il report "Stato in diretta" mostra solo i dati dei tentativi esistenti e non memorizza dati personali.';
 
 $string['autosavedisabled'] = 'Il salvataggio automatico del quiz è disattivato: le risposte compaiono qui solo quando lo studente cambia pagina o consegna.';
 $string['autosavenote'] = 'Le risposte compaiono qui quando il browser dello studente le ha salvate: al cambio pagina o con il salvataggio automatico (ogni {$a}). Lo studente non vede se le risposte sono giuste: questo dipende solo dal comportamento del quiz (es. feedback differito).';
@@ -53,7 +48,12 @@ $string['detail_question'] = 'Domanda {$a->number}: {$a->result}';
 $string['detail_unanswered'] = 'non data';
 $string['detail_wrong'] = 'sbagliata';
 $string['lastupdate'] = 'Aggiornato alle {$a->time}, aggiornamento automatico ogni {$a->seconds} secondi.';
+$string['livestatus'] = 'Stato in diretta';
+$string['livestatusreport'] = 'Stato in diretta';
 $string['noattempts'] = 'Nessun tentativo in corso o completato.';
+$string['pluginname'] = 'Stato in diretta';
+$string['privacy:metadata'] = 'Il report "Stato in diretta" mostra solo i dati dei tentativi esistenti e non memorizza dati personali.';
+
 $string['refreshnow'] = 'Aggiorna ora';
 $string['showdetails'] = 'Mostra le risposte per domanda';
 $string['showdetails_desc'] = 'Il docente può cliccare su una riga per vedere a quali domande lo studente ha risposto correttamente e a quali no (solo giusto/sbagliato, non le risposte).';

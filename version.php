@@ -18,14 +18,15 @@
  * Version information for the quiz live status report.
  *
  * @package   quiz_livestatus
- * @copyright 2026 wishmerhill
+ * @copyright 2026 Alberto Azzalini <alberto.azzalini@gmail.com>
  * @license   https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'quiz_livestatus';
-$plugin->version   = 2026111701;
+$plugin->version   = 2026111800;
 $plugin->requires  = 2024100700;
+$plugin->supported = [405, 405];
 $plugin->maturity  = MATURITY_BETA;
-$plugin->release   = '0.2';
+$plugin->release   = '0.3';

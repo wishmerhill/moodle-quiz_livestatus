@@ -22,11 +22,9 @@
  * so the quiz behaviour (e.g. deferred feedback) is unaffected for the students.
  *
  * @package   quiz_livestatus
- * @copyright 2026 wishmerhill
+ * @copyright 2026 Alberto Azzalini <alberto.azzalini@gmail.com>
  * @license   https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-defined('MOODLE_INTERNAL') || die();
 
 use mod_quiz\local\reports\report_base;
 use mod_quiz\quiz_attempt;
@@ -35,21 +33,20 @@ use mod_quiz\quiz_attempt;
  * The live status report class.
  */
 class quiz_livestatus_report extends report_base {
-
     /** @var int seconds between automatic page refreshes. */
-    const REFRESH_SECONDS = 10;
+    public const REFRESH_SECONDS = 10;
 
     /** @var float minimum fraction for an answer to count as correct. */
-    const CORRECT_FRACTION = 0.99;
+    public const CORRECT_FRACTION = 0.99;
 
     /** @var string progress bar with one segment per result. */
-    const BAR_SEGMENTS = 'segments';
+    public const BAR_SEGMENTS = 'segments';
 
     /** @var string progress bar in a single colour: good or bad. */
-    const BAR_BINARY = 'binary';
+    public const BAR_BINARY = 'binary';
 
     /** @var string[] symbol shown in the details for each result. */
-    const SYMBOLS = ['correct' => '✔', 'partial' => '~', 'wrong' => '✘', 'unanswered' => '·', 'error' => '?'];
+    public const SYMBOLS = ['correct' => '✔', 'partial' => '~', 'wrong' => '✘', 'unanswered' => '·', 'error' => '?'];
 
     /** @var string progress bar style, one of the BAR_ constants. */
     protected $barstyle = self::BAR_SEGMENTS;
@@ -78,7 +75,7 @@ class quiz_livestatus_report extends report_base {
         $this->showdetails = !isset($config->showdetails) || !empty($config->showdetails);
 
         $reporturl = new moodle_url('/mod/quiz/report.php', ['id' => $cm->id, 'mode' => 'livestatus']);
-        $PAGE->requires->js_init_code($this->get_js((int) $cm->id));
+        $PAGE->requires->js_call_amd('quiz_livestatus/refresh', 'init', [(int) $cm->id, self::REFRESH_SECONDS]);
 
         $this->print_header_and_tabs($cm, $course, $quiz, 'livestatus');
 
@@ -117,87 +114,6 @@ class quiz_livestatus_report extends report_base {
     }
 
     /**
-     * JavaScript for the automatic refresh and the expandable rows.
-     *
-     * Open rows and the scroll position are kept in sessionStorage, so they survive the refresh.
-     *
-     * @param int $cmid the course module id, used to keep the state of each quiz apart.
-     * @return string the code.
-     */
-    protected function get_js(int $cmid): string {
-        $key = json_encode('quiz_livestatus_' . $cmid);
-        $delay = self::REFRESH_SECONDS * 1000;
-        return <<<JS
-(function() {
-    var key = {$key};
-    var state = {open: [], scroll: 0, time: 0};
-    try {
-        state = Object.assign(state, JSON.parse(window.sessionStorage.getItem(key)) || {});
-    } catch (e) {
-        // Storage not available: rows simply start closed.
-    }
-    var open = state.open;
-
-    function save() {
-        try {
-            window.sessionStorage.setItem(key, JSON.stringify({open: open, scroll: window.scrollY, time: Date.now()}));
-        } catch (e) {
-            // Ignore.
-        }
-    }
-
-    function setOpen(row, isopen) {
-        var detail = document.querySelector('tr.qls-detail[data-attemptid="' + row.dataset.attemptid + '"]');
-        if (!detail) {
-            return;
-        }
-        detail.classList.toggle('d-none', !isopen);
-        row.setAttribute('aria-expanded', isopen ? 'true' : 'false');
-        var caret = row.querySelector('.qls-caret');
-        if (caret) {
-            caret.textContent = isopen ? '▾' : '▸';
-        }
-    }
-
-    function toggle(row) {
-        var id = row.dataset.attemptid;
-        var isopen = open.indexOf(id) === -1;
-        open = open.filter(function(x) { return x !== id; });
-        if (isopen) {
-            open.push(id);
-        }
-        setOpen(row, isopen);
-        save();
-    }
-
-    document.querySelectorAll('tr.qls-toggle').forEach(function(row) {
-        if (open.indexOf(row.dataset.attemptid) !== -1) {
-            setOpen(row, true);
-        }
-        row.addEventListener('click', function(e) {
-            if (!e.target.closest('a, button, input')) {
-                toggle(row);
-            }
-        });
-        row.addEventListener('keydown', function(e) {
-            if ((e.key === 'Enter' || e.key === ' ') && e.target === row) {
-                e.preventDefault();
-                toggle(row);
-            }
-        });
-    });
-
-    // Back to where the teacher was, but only right after a refresh.
-    if (state.time && Date.now() - state.time < {$delay} + 30000) {
-        window.scrollTo(0, state.scroll);
-    }
-    window.addEventListener('beforeunload', save);
-    setTimeout(function() { window.location.reload(); }, {$delay});
-})();
-JS;
-    }
-
-    /**
      * Load the in-progress and finished attempts (no previews) with user name fields.
      *
      * @param stdClass $quiz the quiz settings.
@@ -209,7 +125,10 @@ JS;
 
         $userfields = \core_user\fields::for_name()->get_sql('u', true);
         [$statesql, $stateparams] = $DB->get_in_or_equal(
-            [quiz_attempt::IN_PROGRESS, quiz_attempt::FINISHED], SQL_PARAMS_NAMED, 'state');
+            [quiz_attempt::IN_PROGRESS, quiz_attempt::FINISHED],
+            SQL_PARAMS_NAMED,
+            'state'
+        );
         $params = ['quizid' => $quiz->id] + $stateparams + $userfields->params;
 
         $groupjoin = '';
@@ -328,7 +247,8 @@ JS;
         return html_writer::div(
             html_writer::div($segments, 'qls-bar', ['role' => 'img', 'aria-label' => $summary, 'title' => $summary]) .
             html_writer::span($c['answered'] . ' / ' . $c['total'], 'qls-count'),
-            'qls-progress');
+            'qls-progress'
+        );
     }
 
     /**
@@ -347,7 +267,9 @@ JS;
             $badges .= html_writer::span(
                 s($s['number']) . ' ' . html_writer::span(self::SYMBOLS[$s['result']], '', ['aria-hidden' => 'true']) .
                 html_writer::span($label, 'visually-hidden'),
-                'qls-badge qls-' . $s['result'], ['title' => $label]);
+                'qls-badge qls-' . $s['result'],
+                ['title' => $label]
+            );
         }
         return html_writer::div($badges, 'qls-badges');
     }
@@ -376,16 +298,20 @@ JS;
             $inprogress = $attempt->state === quiz_attempt::IN_PROGRESS;
             $state = html_writer::span(
                 get_string($inprogress ? 'state_inprogress' : 'state_finished', 'quiz_livestatus'),
-                'badge ' . ($inprogress ? 'bg-warning text-dark' : 'bg-success'));
+                'badge ' . ($inprogress ? 'bg-warning text-dark' : 'bg-success')
+            );
 
             $name = html_writer::link(
                 new moodle_url('/user/view.php', ['id' => $attempt->userid, 'course' => $course->id]),
-                fullname($attempt));
+                fullname($attempt)
+            );
             if ($this->showdetails) {
                 $name = html_writer::span('▸', 'qls-caret', ['aria-hidden' => 'true']) . ' ' . $name;
             }
             $review = html_writer::link(
-                new moodle_url('/mod/quiz/review.php', ['attempt' => $attempt->id]), $attempt->attempt);
+                new moodle_url('/mod/quiz/review.php', ['attempt' => $attempt->id]),
+                $attempt->attempt
+            );
 
             $row = new html_table_row([
                 $name,

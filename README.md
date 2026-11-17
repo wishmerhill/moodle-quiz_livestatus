@@ -31,7 +31,8 @@ deferred feedback, for example, students still see nothing until they submit.
 - Page refreshes automatically every 10 seconds, plus a "Refresh now" button.
   Open rows and the scroll position are kept across refreshes.
 - Respects separate groups.
-- Languages: English, Italian.
+- Languages: English. Translations are managed by the Moodle community on
+  [AMOS](https://lang.moodle.org/), once the plugin is in the plugins directory.
 
 ## Question types
 
@@ -64,7 +65,7 @@ to see answers sooner.
 
 ## Requirements
 
-- Moodle 4.5 or later (tested on 4.5.15).
+- Moodle 4.5 (tested on 4.5.15).
 
 ## Installation
 
@@ -100,6 +101,9 @@ with the `mod/quiz:viewreports` capability.
 
 ## Changes
 
+- **0.3** (beta): JavaScript moved to an AMD module, code style checked with
+  moodle-plugin-ci, Italian strings moved out of the plugin (to be contributed
+  through AMOS).
 - **0.2** (beta): coloured progress bar, per-question details, site settings.
   Fix: an ordering question the student had not touched yet was counted as
   answered. First release with an installable ZIP.

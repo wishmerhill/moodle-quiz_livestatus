@@ -18,16 +18,11 @@
  * English strings for the quiz live status report.
  *
  * @package   quiz_livestatus
- * @copyright 2026 wishmerhill
+ * @copyright 2026 Alberto Azzalini <alberto.azzalini@gmail.com>
  * @license   https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
-
-$string['pluginname'] = 'Live status';
-$string['livestatus'] = 'Live status';
-$string['livestatusreport'] = 'Live status';
-$string['privacy:metadata'] = 'The quiz live status report only displays existing quiz attempt data and does not store any personal data.';
 
 $string['autosavedisabled'] = 'Quiz autosave is disabled: answers appear here only when the student changes page or submits.';
 $string['autosavenote'] = 'Answers appear here once the student\'s browser has saved them: on page change or by autosave (every {$a}). Students do not see whether their answers are right; this only depends on the quiz behaviour (e.g. deferred feedback).';
@@ -53,7 +48,12 @@ $string['detail_question'] = 'Question {$a->number}: {$a->result}';
 $string['detail_unanswered'] = 'not answered';
 $string['detail_wrong'] = 'wrong';
 $string['lastupdate'] = 'Updated at {$a->time}, automatic refresh every {$a->seconds} seconds.';
+$string['livestatus'] = 'Live status';
+$string['livestatusreport'] = 'Live status';
 $string['noattempts'] = 'No attempts in progress or finished yet.';
+$string['pluginname'] = 'Live status';
+$string['privacy:metadata'] = 'The quiz live status report only displays existing quiz attempt data and does not store any personal data.';
+
 $string['refreshnow'] = 'Refresh now';
 $string['showdetails'] = 'Show answers per question';
 $string['showdetails_desc'] = 'Teachers can click a row to see which questions the student answered correctly or wrongly (only right/wrong, not the answers themselves).';

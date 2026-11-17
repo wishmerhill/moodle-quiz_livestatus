@@ -20,7 +20,7 @@
  * Included by mod/quiz/settings.php, which provides $settings.
  *
  * @package   quiz_livestatus
- * @copyright 2026 wishmerhill
+ * @copyright 2026 Alberto Azzalini <alberto.azzalini@gmail.com>
  * @license   https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
