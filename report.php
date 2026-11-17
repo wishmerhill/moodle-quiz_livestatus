@@ -97,19 +97,16 @@ class quiz_livestatus_report extends report_base {
 
         if ($currentgroup == self::NO_GROUPS_ALLOWED) {
             echo $OUTPUT->notification(get_string('notingroup'));
-            echo $OUTPUT->footer();
             return true;
         }
 
         $attempts = $this->get_attempts($quiz, $currentgroup);
         if (!$attempts) {
             echo $OUTPUT->notification(get_string('noattempts', 'quiz_livestatus'), 'info', false);
-            echo $OUTPUT->footer();
             return true;
         }
 
         echo html_writer::table($this->build_table($attempts, $course));
-        echo $OUTPUT->footer();
         return true;
     }
 
