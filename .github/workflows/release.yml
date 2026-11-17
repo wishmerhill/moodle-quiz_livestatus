@@ -22,6 +22,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      # actions/checkout may turn an annotated tag into a lightweight one, losing the message used as release notes.
+      - name: Fetch the annotated tag
+        run: git fetch --force origin "refs/tags/${GITHUB_REF_NAME}:refs/tags/${GITHUB_REF_NAME}"
+
       - name: Check that the tag matches version.php
         id: version
         run: |
